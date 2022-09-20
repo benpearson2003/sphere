@@ -19,6 +19,7 @@ var sphere = new Sphere3D(radius),
         py: 0
     },
     modify = 1;
+var playerLoc;
 
 
 
@@ -207,13 +208,20 @@ function drawTriangle(ctx, triangle) {
                 ctx.moveTo(p0[0],p0[1]);
                 ctx.lineTo(p1[0],p1[1]);
                 ctx.lineTo(p2[0],p2[1]);
-                ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
+                let mousedOver = ctx.isPointInPath(mouse.x,mouse.y);
                 ctx.strokeStyle = borderColor;
+                ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
+                ctx.fillStyle = mousedOver ? 'rgb(50,0,0)' : ctx.fillstyle;
+                ctx.fillStyle = triangle === playerLoc ? 'rgb(204,102,0)' : ctx.fillStyle;
                 ctx.stroke();
                 ctx.fill();
             }
         }
     }
+}
+
+function isLand(tri) {
+    return tri.elevation > (radius * 0.95);
 }
 
 function update() {
@@ -239,12 +247,12 @@ function update() {
         }
     }
     sphere.triangle.sort((a,b) => {
-        let a_verageZ = (a.a.z + a.b.z + a.c.z)/3;
-        let b_verageZ = (b.a.z + b.b.z + b.c.z)/3;
-        if(a_verageZ < b_verageZ) {
+        let aZ = (a.a.z + a.b.z + a.c.z)/3;
+        let bZ = (b.a.z + b.b.z + b.c.z)/3;
+        if(aZ < bZ) {
             return -1;
         }
-        if(b_verageZ < a_verageZ) {
+        if(bZ < aZ) {
             return 1;
         }
 
@@ -258,7 +266,42 @@ function update() {
     requestAnimFrame(update);
 }
 
+function move(dir) {
+    switch(dir){
+        case 'north':
+            console.log('north');
+            break;
+        case 'west':
+            console.log('west');
+            break;
+        case 'south':
+            console.log('south');
+            break;
+        case 'east':
+            console.log('east');
+            break;
+    }
+}
+
+function takeAction(e) {
+    switch(e.keyCode){
+        case 87: // W
+            move('north');
+            break;
+        case 65: // A
+            move('west');
+            break;
+        case 83: // S
+            move('south');
+            break;
+        case 68: //D
+            move('east');
+            break;
+    }
+}
+
 function start() {
+    window.addEventListener('keydown', takeAction);
     canvas.onmousemove = function (e) {
         mouse.px  = mouse.x;
         mouse.py  = mouse.y;
@@ -280,6 +323,7 @@ function start() {
     };
 
     update();
+    playerLoc = sphere.triangle[32767];
 }
 
 window.onload = function() {
