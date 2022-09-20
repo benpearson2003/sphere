@@ -2,11 +2,13 @@ var tau = 6.283;
 var seaColor = "rgb(0,128,255)";
 var landColor = "rgb(0,153,0)";
 var borderColor = "rgb(0,0,0)";
+var radius = 40;
 var canvas,
     ctx,
     depth = 6,
+    moreDetail = false,
     cullError = 40;
-    sphere = new Sphere3D(40),
+var sphere = new Sphere3D(radius),
     distance = 5000,
     mouse = {
         down: false,
@@ -30,14 +32,12 @@ window.requestAnimFrame =
         window.setTimeout(callback, 1000 / 60);
     };
 
-Number.prototype.clamp = function(min, max) {
-    return Math.min(Math.max(this, min), max);
-};
-
 function normalize(p) {
     s = Math.sqrt((p.x*p.x) + (p.y*p.y) + (p.z*p.z));
     point = new Point3D();
-    point.x = (p.x/s)*p.elevation; point.y = (p.y/s)*p.elevation; point.z = (p.z/s)*p.elevation; point.elevation = p.elevation;
+    point.x = (p.x/s)*radius; point.y = (p.y/s)*radius; point.z = (p.z/s)*radius;
+    point.elevation = p.elevation;
+    //point.elevation = p.elevation * getRandomArbitrary(0.90,1.1);
     return point;
 }
 
@@ -72,7 +72,6 @@ function Sphere3D(radius) {
     this.radius = (typeof(radius) != "number") ? 20.0 : radius;
 
     var tempTriangle = [];
-    var seaLevel = this.radius*0.95;
 
     var octoVerts = [
         [1, 0, 0],
@@ -100,7 +99,8 @@ function Sphere3D(radius) {
         p.x = octoVerts[i][0] * this.radius;
         p.y = octoVerts[i][1] * this.radius;
         p.z = octoVerts[i][2] * this.radius;
-        p.elevation = Math.sqrt((p.x - 0.0)*(p.x - 0.0) + (p.y - 0.0)*(p.y - 0.0) + (p.z - 0.0)*(p.z - 0.0));
+        // p.elevation = Math.sqrt((p.x - 0.0)*(p.x - 0.0) + (p.y - 0.0)*(p.y - 0.0) + (p.z - 0.0)*(p.z - 0.0));
+        p.elevation = 40-i/1.25;
     }
 
     for(let i = 0; i < octoFaces.length; i++) {
@@ -119,6 +119,14 @@ function Sphere3D(radius) {
     }
 }
 
+function getRandomArbitrary(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function averageElevation(a,b,c) {
+    return (a.elevation + b.elevation + c.elevation) / 3;
+}
+
 function subdivide(points,tri) {
     // subdivide triangles along edges
     let a = tri.a, b = tri.b, c = tri.c, elevation = tri.elevation;
@@ -127,10 +135,10 @@ function subdivide(points,tri) {
     mid_b_c = normalize(midpoint(b,c));
     points.push(mid_a_b,mid_a_c,mid_b_c);
     triangles = [
-        new Face3D(a,mid_a_b,mid_a_c,elevation),
-        new Face3D(mid_a_b,b,mid_b_c,elevation),
-        new Face3D(mid_a_c,mid_b_c,c,elevation),
-        new Face3D(mid_a_b,mid_b_c,mid_a_c,elevation)
+        new Face3D(a,mid_a_b,mid_a_c,averageElevation(a,mid_a_b,mid_a_c)),
+        new Face3D(mid_a_b,b,mid_b_c,averageElevation(mid_a_b,b,mid_b_c)),
+        new Face3D(mid_a_c,mid_b_c,c,averageElevation(mid_a_c,mid_b_c,c)),
+        new Face3D(mid_a_b,mid_b_c,mid_a_c,averageElevation(mid_a_b,mid_b_c,mid_a_c))
     ];
     return triangles;
 }
@@ -166,38 +174,44 @@ function drawTriangle(ctx, triangle) {
     let p2 = [projection(c.x, c.z * modify, canvas.width / 2.0, 100.0, distance),
         projection(c.y, c.z * modify, canvas.height / 2.0, 100.0, distance)];
 
-    // show midpoints
-    // let mid_a_b = normalize(midpoint(a,b));
-    // let mid_a_c = normalize(midpoint(a,c));
-    // let mid_b_c = normalize(midpoint(b,c));
-    //
-    // let mid0 = [projection(mid_a_b.x, mid_a_b.z * modify, canvas.width / 2.0, 100.0, distance),
-    //     projection(mid_a_b.y, mid_a_b.z * modify, canvas.height / 2.0, 100.0, distance)];
-    // let mid1 = [projection(mid_a_c.x, mid_a_c.z * modify, canvas.width / 2.0, 100.0, distance),
-    //     projection(mid_a_c.y, mid_a_c.z * modify, canvas.height / 2.0, 100.0, distance)];
-    // let mid2 = [projection(mid_b_c.x, mid_b_c.z * modify, canvas.width / 2.0, 100.0, distance),
-    //     projection(mid_b_c.y, mid_b_c.z * modify, canvas.height / 2.0, 100.0, distance)];
-
     // cull based on curve orientation
     if((p1[0]*p0[1]+p2[0]*p1[1]+p0[0]*p2[1]) < (p0[0]*p1[1]+p1[0]*p2[1]+p2[0]*p0[1])){
         // only draw faces with at least one point inside the canvas
         if((p0[0] > -cullError && p0[0] < canvas.width+cullError) && (p0[1] > -cullError && p0[1] < canvas.height+cullError)
             || (p1[0] > -cullError && p1[0] < canvas.width+cullError) && (p1[1] > -cullError && p1[1] < canvas.height+cullError)
             || (p2[0] > -cullError && p2[0] < canvas.width+cullError) && (p2[1] > -cullError && p2[1] < canvas.height+cullError)){
-            ctx.beginPath();
-            ctx.moveTo(p0[0],p0[1]);
-            ctx.lineTo(p1[0],p1[1]);
-            ctx.lineTo(p2[0],p2[1]);
-            ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
-            ctx.strokeStyle = borderColor;
-            ctx.stroke();
-            ctx.fill();
 
-            // show midpoints
-            // ctx.fillStyle= "orange";
-            // ctx.fillRect(mid0[0],mid0[1],5,5);
-            // ctx.fillRect(mid1[0],mid1[1],5,5);
-            // ctx.fillRect(mid2[0],mid2[1],5,5);
+            if(moreDetail) {
+                let canvasPoints = new Array();
+                let newTriangles = subdivide(canvasPoints,triangle);
+                newTriangles.forEach((item, i) => {
+                    let a = item.a, b = item.b, c = item.c;
+                    let p0 = [projection(a.x, a.z * modify, canvas.width / 2.0, 100.0, distance),
+                        projection(a.y, a.z * modify, canvas.height / 2.0, 100.0, distance)];
+                    let p1 = [projection(b.x, b.z * modify, canvas.width / 2.0, 100.0, distance),
+                        projection(b.y, b.z * modify, canvas.height / 2.0, 100.0, distance)];
+                    let p2 = [projection(c.x, c.z * modify, canvas.width / 2.0, 100.0, distance),
+                        projection(c.y, c.z * modify, canvas.height / 2.0, 100.0, distance)];
+
+                    ctx.beginPath();
+                    ctx.moveTo(p0[0],p0[1]);
+                    ctx.lineTo(p1[0],p1[1]);
+                    ctx.lineTo(p2[0],p2[1]);
+                    ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
+                    ctx.strokeStyle = borderColor;
+                    ctx.stroke();
+                    ctx.fill();
+                });
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(p0[0],p0[1]);
+                ctx.lineTo(p1[0],p1[1]);
+                ctx.lineTo(p2[0],p2[1]);
+                ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
+                ctx.strokeStyle = borderColor;
+                ctx.stroke();
+                ctx.fill();
+            }
         }
     }
 }
@@ -224,9 +238,21 @@ function update() {
             }
         }
     }
-    for(i = 0; i < sphere.triangle.length; i++) {
-        drawTriangle(ctx,sphere.triangle[i]);
-    }
+    sphere.triangle.sort((a,b) => {
+        let a_verageZ = (a.a.z + a.b.z + a.c.z)/3;
+        let b_verageZ = (b.a.z + b.b.z + b.c.z)/3;
+        if(a_verageZ < b_verageZ) {
+            return -1;
+        }
+        if(b_verageZ < a_verageZ) {
+            return 1;
+        }
+
+        return 0;
+    });
+    sphere.triangle.forEach((item, i) => {
+        drawTriangle(ctx,item);
+    });
     ctx.restore();
 
     requestAnimFrame(update);
