@@ -1,3 +1,5 @@
+// Positive Z is closest to screen
+
 var tau = 6.283;
 var seaColor = "rgb(0,128,255)";
 var landColor = "rgb(0,153,0)";
@@ -19,7 +21,7 @@ var sphere = new Sphere3D(radius),
         py: 0
     },
     modify = 1;
-var playerLoc;
+var player = new Player(sphere.point[4]);
 
 
 
@@ -51,11 +53,11 @@ function midpoint(u,v) {
     return point;
 }
 
-function Point3D() {
-    this.x = 0;
-    this.y = 0;
-    this.z = 0;
-    this.elevation = 0;
+function Point3D(x = 0,y = 0,z = 0,el = 0) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    this.elevation = el;
 }
 
 function Face3D(a,b,c,elevation) {
@@ -118,6 +120,10 @@ function Sphere3D(radius) {
         }
         this.triangle = [...faces];
     }
+}
+
+function Player(point) {
+    this.loc = new Point3D(point.x,point.y,point.z);
 }
 
 function getRandomArbitrary(min, max) {
@@ -212,12 +218,18 @@ function drawTriangle(ctx, triangle) {
                 ctx.strokeStyle = borderColor;
                 ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
                 ctx.fillStyle = mousedOver ? 'rgb(50,0,0)' : ctx.fillstyle;
-                ctx.fillStyle = triangle === playerLoc ? 'rgb(204,102,0)' : ctx.fillStyle;
                 ctx.stroke();
                 ctx.fill();
             }
         }
     }
+}
+
+function drawPlayer(ctx, player) {
+    let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),
+        projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
+    ctx.fillStyle = 'rgb(150,0,0)';
+    ctx.fillRect(p[0]-5,p[1]-5,10,10);
 }
 
 function isLand(tri) {
@@ -261,6 +273,7 @@ function update() {
     sphere.triangle.forEach((item, i) => {
         drawTriangle(ctx,item);
     });
+    drawPlayer(ctx,player);
     ctx.restore();
 
     requestAnimFrame(update);
@@ -268,17 +281,17 @@ function update() {
 
 function move(dir) {
     switch(dir){
-        case 'north':
-            console.log('north');
+        case 'forward':
+            console.log('forward');
             break;
-        case 'west':
-            console.log('west');
+        case 'left':
+            console.log('left');
             break;
-        case 'south':
-            console.log('south');
+        case 'backward':
+            console.log('backward');
             break;
-        case 'east':
-            console.log('east');
+        case 'right':
+            console.log('right');
             break;
     }
 }
@@ -286,16 +299,16 @@ function move(dir) {
 function takeAction(e) {
     switch(e.keyCode){
         case 87: // W
-            move('north');
+            move('forward');
             break;
         case 65: // A
-            move('west');
+            move('left');
             break;
         case 83: // S
-            move('south');
+            move('backward');
             break;
         case 68: //D
-            move('east');
+            move('right');
             break;
     }
 }
@@ -323,7 +336,6 @@ function start() {
     };
 
     update();
-    playerLoc = sphere.triangle[32767];
 }
 
 window.onload = function() {
