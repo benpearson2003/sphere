@@ -11,7 +11,15 @@ var canvas,
     moreDetail = false,
     cullError = 40;
 var sphere = new Sphere3D(radius),
-    distance = 5000,
+    distance = 500,
+    dir = {
+        forward: false,
+        left: false,
+        backward: false,
+        right: false,
+        clockwise: false,
+        anticlockwise: false
+    }
     mouse = {
         down: false,
         button: 1,
@@ -37,19 +45,23 @@ window.requestAnimFrame =
 
 function normalize(p) {
     s = Math.sqrt((p.x*p.x) + (p.y*p.y) + (p.z*p.z));
-    point = new Point3D();
-    point.x = (p.x/s)*radius; point.y = (p.y/s)*radius; point.z = (p.z/s)*radius;
-    point.elevation = p.elevation;
+    point = new Point3D(
+        (p.x/s)*radius,
+        (p.y/s)*radius,
+        (p.z/s)*radius,
+        p.elevation
+    );
     //point.elevation = p.elevation * getRandomArbitrary(0.90,1.1);
     return point;
 }
 
 function midpoint(u,v) {
-    point = new Point3D();
-    point.x = (u.x+v.x)/2;
-    point.y = (u.y+v.y)/2;
-    point.z = (u.z+v.z)/2;
-    point.elevation = (u.elevation+v.elevation)/2;
+    point = new Point3D(
+        (u.x+v.x)/2,
+        (u.y+v.y)/2,
+        (u.z+v.z)/2,
+        (u.elevation+v.elevation)/2
+    );
     return point;
 }
 
@@ -57,6 +69,9 @@ function Point3D(x = 0,y = 0,z = 0,el = 0) {
     this.x = x;
     this.y = y;
     this.z = z;
+    this.projX = x;
+    this.projY = y;
+    this.projZ = z;
     this.elevation = el;
 }
 
@@ -98,10 +113,11 @@ function Sphere3D(radius) {
 
     // octahedron
     for(let i = 0; i < octoVerts.length; i++) {
-        p = this.point[i] = new Point3D();
-        p.x = octoVerts[i][0] * this.radius;
-        p.y = octoVerts[i][1] * this.radius;
-        p.z = octoVerts[i][2] * this.radius;
+        p = this.point[i] = new Point3D(
+            octoVerts[i][0] * this.radius,
+            octoVerts[i][1] * this.radius,
+            octoVerts[i][2] * this.radius
+        );
         // p.elevation = Math.sqrt((p.x - 0.0)*(p.x - 0.0) + (p.y - 0.0)*(p.y - 0.0) + (p.z - 0.0)*(p.z - 0.0));
         p.elevation = 40-i/1.25;
     }
@@ -150,22 +166,40 @@ function subdivide(points,tri) {
     return triangles;
 }
 
-function rotateX(point, radians) {
-    var y = point.y;
-    point.y = (y * Math.cos(radians)) + (point.z * Math.sin(radians) * -1.0);
-    point.z = (y * Math.sin(radians)) + (point.z * Math.cos(radians));
+function rotateX(point, radians, proj = false) {
+    if(!proj) {
+        var y = point.y;
+        point.y = (y * Math.cos(radians)) + (point.z * Math.sin(radians) * -1.0);
+        point.z = (y * Math.sin(radians)) + (point.z * Math.cos(radians));
+    } else {
+        var y = point.projY;
+        point.projY = (y * Math.cos(radians)) + (point.projZ * Math.sin(radians) * -1.0);
+        point.projZ = (y * Math.sin(radians)) + (point.projZ * Math.cos(radians));
+    }
 }
 
-function rotateY(point, radians) {
-    var x = point.x;
-    point.x = (x * Math.cos(radians)) + (point.z * Math.sin(radians) * -1.0);
-    point.z = (x * Math.sin(radians)) + (point.z * Math.cos(radians));
+function rotateY(point, radians, proj = false) {
+    if(!proj) {
+        var x = point.x;
+        point.x = (x * Math.cos(radians)) + (point.z * Math.sin(radians) * -1.0);
+        point.z = (x * Math.sin(radians)) + (point.z * Math.cos(radians));
+    } else {
+        var x = point.projX;
+        point.projX = (x * Math.cos(radians)) + (point.projZ * Math.sin(radians) * -1.0);
+        point.projZ = (x * Math.sin(radians)) + (point.projZ * Math.cos(radians));
+    }
 }
 
-function rotateZ(point, radians) {
-    var x = point.x;
-    point.x = (x * Math.cos(radians)) + (point.y * Math.sin(radians) * -1.0);
-    point.y = (x * Math.sin(radians)) + (point.y * Math.cos(radians));
+function rotateZ(point, radians, proj = false) {
+    if(!proj) {
+        var x = point.x;
+        point.x = (x * Math.cos(radians)) + (point.y * Math.sin(radians) * -1.0);
+        point.y = (x * Math.sin(radians)) + (point.y * Math.cos(radians));
+    } else {
+        var x = point.projX;
+        point.projX = (x * Math.cos(radians)) + (point.projY * Math.sin(radians) * -1.0);
+        point.projY = (x * Math.sin(radians)) + (point.projY * Math.cos(radians));
+    }
 }
 
 function projection(xy, z, xyOffset, zOffset, distance) {
@@ -174,12 +208,12 @@ function projection(xy, z, xyOffset, zOffset, distance) {
 
 function drawTriangle(ctx, triangle) {
     let a = triangle.a, b = triangle.b, c = triangle.c;
-    let p0 = [projection(a.x, a.z * modify, canvas.width / 2.0, 100.0, distance),
-        projection(a.y, a.z * modify, canvas.height / 2.0, 100.0, distance)];
-    let p1 = [projection(b.x, b.z * modify, canvas.width / 2.0, 100.0, distance),
-        projection(b.y, b.z * modify, canvas.height / 2.0, 100.0, distance)];
-    let p2 = [projection(c.x, c.z * modify, canvas.width / 2.0, 100.0, distance),
-        projection(c.y, c.z * modify, canvas.height / 2.0, 100.0, distance)];
+    let p0 = [projection(a.projX, a.projZ * modify, canvas.width / 2.0, 100.0, distance),
+        projection(a.projY, a.projZ * modify, canvas.height / 2.0, 100.0, distance)];
+    let p1 = [projection(b.projX, b.projZ * modify, canvas.width / 2.0, 100.0, distance),
+        projection(b.projY, b.projZ * modify, canvas.height / 2.0, 100.0, distance)];
+    let p2 = [projection(c.projX, c.projZ * modify, canvas.width / 2.0, 100.0, distance),
+        projection(c.projY, c.projZ * modify, canvas.height / 2.0, 100.0, distance)];
 
     // cull based on curve orientation
     if((p1[0]*p0[1]+p2[0]*p1[1]+p0[0]*p2[1]) < (p0[0]*p1[1]+p1[0]*p2[1]+p2[0]*p0[1])){
@@ -214,10 +248,12 @@ function drawTriangle(ctx, triangle) {
                 ctx.moveTo(p0[0],p0[1]);
                 ctx.lineTo(p1[0],p1[1]);
                 ctx.lineTo(p2[0],p2[1]);
-                let mousedOver = ctx.isPointInPath(mouse.x,mouse.y);
+                let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),
+                    projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
+                let playerLoc = ctx.isPointInPath(p[0],p[1]);
                 ctx.strokeStyle = borderColor;
                 ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
-                ctx.fillStyle = mousedOver ? 'rgb(50,0,0)' : ctx.fillstyle;
+                ctx.fillStyle = playerLoc ? 'rgb(200,50,50)' : ctx.fillstyle;
                 ctx.stroke();
                 ctx.fill();
             }
@@ -228,7 +264,7 @@ function drawTriangle(ctx, triangle) {
 function drawPlayer(ctx, player) {
     let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),
         projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
-    ctx.fillStyle = 'rgb(150,0,0)';
+    ctx.fillStyle = 'rgb(150,150,0)';
     ctx.fillRect(p[0]-5,p[1]-5,10,10);
 }
 
@@ -242,22 +278,33 @@ function update() {
 
     var rotateAmount = 0.01;
 
-    for (i = 0; i < sphere.point.length; i++) {
-        if (mouse.down) {
-            if(mouse.y < 295) {
-                rotateX(sphere.point[i], -1*rotateAmount);
-            }
-            if(mouse.y > 305) {
-                rotateX(sphere.point[i], rotateAmount);
-            }
-            if(mouse.x < 395) {
-                rotateY(sphere.point[i], -1*rotateAmount);
-            }
-            if(mouse.x > 405) {
-                rotateY(sphere.point[i], rotateAmount);
-            }
-        }
+    if(dir.left) {
+        rotateY(player.loc, -0.1*rotateAmount);
+        sphere.point.forEach((item, i) => {
+             rotateY(item, rotateAmount, true);
+         });
     }
+    if(dir.backward) {
+        rotateX(player.loc, rotateAmount);
+    }
+    if(dir.forward) {
+        rotateX(player.loc, -1*rotateAmount);
+
+    }
+    if(dir.right) {
+        rotateY(player.loc, rotateAmount);
+    }
+    // if(dir.clockwise) {
+    //     sphere.point.forEach((item, i) => {
+    //         rotateZ(item, rotateAmount);
+    //     });
+    // }
+    // if(dir.anticlockwise) {
+    //     sphere.point.forEach((item, i) => {
+    //         rotateZ(item, -1*rotateAmount);
+    //     });
+    // }
+
     sphere.triangle.sort((a,b) => {
         let aZ = (a.a.z + a.b.z + a.c.z)/3;
         let bZ = (b.a.z + b.b.z + b.c.z)/3;
@@ -279,42 +326,55 @@ function update() {
     requestAnimFrame(update);
 }
 
-function move(dir) {
-    switch(dir){
-        case 'forward':
-            console.log('forward');
+function keyDown(e) {
+    switch(e.keyCode){
+        case 87: // W
+            dir.forward = true;
             break;
-        case 'left':
-            console.log('left');
+        case 65: // A
+            dir.left = true;
             break;
-        case 'backward':
-            console.log('backward');
+        case 83: // S
+            dir.backward = true;
             break;
-        case 'right':
-            console.log('right');
+        case 68: //D
+            dir.right = true;
+            break;
+        case 69: //E
+            dir.clockwise = true;
+            break;
+        case 81: //Q
+            dir.anticlockwise = true;
             break;
     }
 }
 
-function takeAction(e) {
+function keyUp(e) {
     switch(e.keyCode){
         case 87: // W
-            move('forward');
+            dir.forward = false;
             break;
         case 65: // A
-            move('left');
+            dir.left = false;
             break;
         case 83: // S
-            move('backward');
+            dir.backward = false;
             break;
         case 68: //D
-            move('right');
+            dir.right = false;
+            break;
+        case 69: //E
+            dir.clockwise = false;
+            break;
+        case 81: //Q
+            dir.anticlockwise = false;
             break;
     }
 }
 
 function start() {
-    window.addEventListener('keydown', takeAction);
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
     canvas.onmousemove = function (e) {
         mouse.px  = mouse.x;
         mouse.py  = mouse.y;
