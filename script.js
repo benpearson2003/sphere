@@ -11,7 +11,7 @@ var canvas,
     moreDetail = false,
     cullError = 40;
 var sphere = new Sphere3D(radius),
-    distance = 500,
+    distance = 5000,
     dir = {
         forward: false,
         left: false,
@@ -248,13 +248,14 @@ function drawTriangle(ctx, triangle) {
                 ctx.moveTo(p0[0],p0[1]);
                 ctx.lineTo(p1[0],p1[1]);
                 ctx.lineTo(p2[0],p2[1]);
-                let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),
-                    projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
-                let playerLoc = ctx.isPointInPath(p[0],p[1]);
-                ctx.strokeStyle = borderColor;
+                let mousedOver = ctx.isPointInPath(mouse.x,mouse.y);
+                // let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
+                // let playerLoc = ctx.isPointInPath(p[0],p[1]);
+                // ctx.strokeStyle = borderColor;
                 ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
-                ctx.fillStyle = playerLoc ? 'rgb(200,50,50)' : ctx.fillstyle;
-                ctx.stroke();
+                ctx.fillStyle = mousedOver ? 'rgb(50,0,0)' : ctx.fillstyle;
+                // ctx.fillStyle = playerLoc ? 'rgb(200,50,50)' : ctx.fillstyle;
+                // ctx.stroke();
                 ctx.fill();
             }
         }
@@ -262,8 +263,8 @@ function drawTriangle(ctx, triangle) {
 }
 
 function drawPlayer(ctx, player) {
-    let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),
-        projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
+    // let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance), projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
+    let p = [canvas.width/2,canvas.height/2];
     ctx.fillStyle = 'rgb(150,150,0)';
     ctx.fillRect(p[0]-5,p[1]-5,10,10);
 }
@@ -273,37 +274,50 @@ function isLand(tri) {
 }
 
 function update() {
+    let forwardColor = ctx.getImageData(canvas.width/2,canvas.height/2-6,1,1).data[1];
+    let backwardColor = ctx.getImageData(canvas.width/2,canvas.height/2+6,1,1).data[1];
+    let leftColor = ctx.getImageData(canvas.width/2-6,canvas.height/2,1,1).data[1];
+    let rightColor = ctx.getImageData(canvas.width/2+6,canvas.height/2,1,1).data[1];
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     var rotateAmount = 0.01;
 
-    if(dir.left) {
-        rotateY(player.loc, -0.1*rotateAmount);
+    if(dir.left && leftColor===128) {
+        rotateY(player.loc, -1*rotateAmount);
         sphere.point.forEach((item, i) => {
              rotateY(item, rotateAmount, true);
          });
     }
-    if(dir.backward) {
+    if(dir.backward && backwardColor===128) {
         rotateX(player.loc, rotateAmount);
+        sphere.point.forEach((item, i) => {
+             rotateX(item, -1*rotateAmount, true);
+         });
     }
-    if(dir.forward) {
+    if(dir.forward && forwardColor===128) {
         rotateX(player.loc, -1*rotateAmount);
+        sphere.point.forEach((item, i) => {
+             rotateX(item, rotateAmount, true);
+         });
 
     }
-    if(dir.right) {
+    if(dir.right && rightColor===128) {
         rotateY(player.loc, rotateAmount);
+        sphere.point.forEach((item, i) => {
+             rotateY(item, -1*rotateAmount, true);
+         });
     }
-    // if(dir.clockwise) {
-    //     sphere.point.forEach((item, i) => {
-    //         rotateZ(item, rotateAmount);
-    //     });
-    // }
-    // if(dir.anticlockwise) {
-    //     sphere.point.forEach((item, i) => {
-    //         rotateZ(item, -1*rotateAmount);
-    //     });
-    // }
+    if(dir.clockwise) {
+        sphere.point.forEach((item, i) => {
+            rotateZ(item, rotateAmount, true);
+        });
+    }
+    if(dir.anticlockwise) {
+        sphere.point.forEach((item, i) => {
+            rotateZ(item, -1*rotateAmount, true);
+        });
+    }
 
     sphere.triangle.sort((a,b) => {
         let aZ = (a.a.z + a.b.z + a.c.z)/3;
