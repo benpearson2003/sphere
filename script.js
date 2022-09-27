@@ -222,42 +222,42 @@ function drawTriangle(ctx, triangle) {
             || (p1[0] > -cullError && p1[0] < canvas.width+cullError) && (p1[1] > -cullError && p1[1] < canvas.height+cullError)
             || (p2[0] > -cullError && p2[0] < canvas.width+cullError) && (p2[1] > -cullError && p2[1] < canvas.height+cullError)){
 
-            if(moreDetail) {
-                let canvasPoints = new Array();
-                let newTriangles = subdivide(canvasPoints,triangle);
-                newTriangles.forEach((item, i) => {
-                    let a = item.a, b = item.b, c = item.c;
-                    let p0 = [projection(a.x, a.z * modify, canvas.width / 2.0, 100.0, distance),
-                        projection(a.y, a.z * modify, canvas.height / 2.0, 100.0, distance)];
-                    let p1 = [projection(b.x, b.z * modify, canvas.width / 2.0, 100.0, distance),
-                        projection(b.y, b.z * modify, canvas.height / 2.0, 100.0, distance)];
-                    let p2 = [projection(c.x, c.z * modify, canvas.width / 2.0, 100.0, distance),
-                        projection(c.y, c.z * modify, canvas.height / 2.0, 100.0, distance)];
-
-                    ctx.beginPath();
-                    ctx.moveTo(p0[0],p0[1]);
-                    ctx.lineTo(p1[0],p1[1]);
-                    ctx.lineTo(p2[0],p2[1]);
-                    ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
-                    ctx.strokeStyle = borderColor;
-                    ctx.stroke();
-                    ctx.fill();
-                });
-            } else {
-                ctx.beginPath();
-                ctx.moveTo(p0[0],p0[1]);
-                ctx.lineTo(p1[0],p1[1]);
-                ctx.lineTo(p2[0],p2[1]);
-                let mousedOver = ctx.isPointInPath(mouse.x,mouse.y);
-                // let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
-                // let playerLoc = ctx.isPointInPath(p[0],p[1]);
-                // ctx.strokeStyle = borderColor;
-                ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
-                ctx.fillStyle = mousedOver ? 'rgb(50,0,0)' : ctx.fillstyle;
-                // ctx.fillStyle = playerLoc ? 'rgb(200,50,50)' : ctx.fillstyle;
-                // ctx.stroke();
-                ctx.fill();
-            }
+            // if(moreDetail) {
+            //     let canvasPoints = new Array();
+            //     let newTriangles = subdivide(canvasPoints,triangle);
+            //     newTriangles.forEach((item, i) => {
+            //         let a = item.a, b = item.b, c = item.c;
+            //         let p0 = [projection(a.x, a.z * modify, canvas.width / 2.0, 100.0, distance),
+            //             projection(a.y, a.z * modify, canvas.height / 2.0, 100.0, distance)];
+            //         let p1 = [projection(b.x, b.z * modify, canvas.width / 2.0, 100.0, distance),
+            //             projection(b.y, b.z * modify, canvas.height / 2.0, 100.0, distance)];
+            //         let p2 = [projection(c.x, c.z * modify, canvas.width / 2.0, 100.0, distance),
+            //             projection(c.y, c.z * modify, canvas.height / 2.0, 100.0, distance)];
+            //
+            //         ctx.beginPath();
+            //         ctx.moveTo(p0[0],p0[1]);
+            //         ctx.lineTo(p1[0],p1[1]);
+            //         ctx.lineTo(p2[0],p2[1]);
+            //         ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
+            //         ctx.strokeStyle = borderColor;
+            //         ctx.stroke();
+            //         ctx.fill();
+            //     });
+            // } else {
+            ctx.beginPath();
+            ctx.moveTo(p0[0],p0[1]);
+            ctx.lineTo(p1[0],p1[1]);
+            ctx.lineTo(p2[0],p2[1]);
+            let mousedOver = ctx.isPointInPath(mouse.x,mouse.y);
+            // let p = [projection(player.loc.x, player.loc.z * modify, canvas.width / 2.0, 100.0, distance),projection(player.loc.y, player.loc.z * modify, canvas.height / 2.0, 100.0, distance)];
+            // let playerLoc = ctx.isPointInPath(p[0],p[1]);
+            // ctx.strokeStyle = borderColor;
+            ctx.fillStyle = triangle.elevation > (40 * 0.95) ? landColor : seaColor;
+            ctx.fillStyle = mousedOver ? 'rgb(50,0,0)' : ctx.fillstyle;
+            // ctx.fillStyle = playerLoc ? 'rgb(200,50,50)' : ctx.fillstyle;
+            // ctx.stroke();
+            ctx.fill();
+            // }
         }
     }
 }
